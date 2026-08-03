@@ -2,9 +2,18 @@
 """
 用 gpt-image-2 生成视频封面（走 B站 LLM 网关）。
 
+两种模式：
+    1. 纯文生图（默认）：只给 --prompt，模型凭描述生成整张封面。
+       适合无「标准答案」的主体——泛指类别（一般会谈场景/城市/港口）、抽象概念（博弈/脱钩/焦虑）。
+    2. 参考图生图（给 --reference-image 时自动启用）：把一张真实素材图喂给模型，
+       让它在这个具体主体上重打光、重建背景，主体不溶解。
+       适合有「标准答案」、观众会拿去和现实核对的具名实体——具体某位政要本人、某款武器型号、某座地标。
+       注意：图生图是「忠实渲染器」，喂错就把错误也精美地还原，参考图务必先核验是不是对的那一个。
+
 用法:
     python3 generate_cover.py --platform bilibili --prompt "封面画面描述" --output cover_bilibili.png
     python3 generate_cover.py --platform douyin   --prompt "..."        --output cover_douyin.png
+    python3 generate_cover.py --platform bilibili --prompt "..." --reference-image 真人照.jpg --output cover.png
 
 API key 读取顺序:
     1. 环境变量 LLM_GATEWAY_API_KEY（优先，方便临时覆盖）
@@ -74,6 +83,13 @@ def main():
     parser.add_argument("--prompt", required=True, help="封面画面描述提示词")
     parser.add_argument("--output", required=True, help="输出文件路径 (.png)")
     parser.add_argument(
+        "--reference-image",
+        default=None,
+        help="可选，真实素材参考图路径。给了就走图生图（images.edit），"
+        "让模型在这张真实主体上重打光重建背景——适合具名实体（政要本人/武器型号/地标）。"
+        "务必先核验这张图确实是对的那一个（图生图会忠实还原你喂的错误）。不给则纯文生图。",
+    )
+    parser.add_argument(
         "--size",
         default=None,
         help="可选，手动指定尺寸如 1024x768，覆盖平台默认值",
@@ -99,17 +115,37 @@ def main():
     size = resolve_size(args.platform, args.size)
     client = openai.OpenAI(base_url=BASE_URL, api_key=api_key)
 
-    print("正在生成 " + args.platform + " 封面 (" + size + ") ...", file=sys.stderr)
-    try:
-        result = client.images.generate(
-            model=MODEL,
-            prompt=args.prompt,
-            size=size,
-            n=1,
-        )
-    except Exception as e:
-        print("生成失败：" + str(e), file=sys.stderr)
-        return 1
+    ref = args.reference_image
+    if ref:
+        if not os.path.isfile(ref):
+            print("错误：参考图不存在：" + ref, file=sys.stderr)
+            return 1
+        print("正在用参考图生成 " + args.platform + " 封面 (" + size + ") ...", file=sys.stderr)
+        print("参考图：" + ref + "（务必已确认这张确实是对的那一个）", file=sys.stderr)
+        try:
+            with open(ref, "rb") as img_f:
+                result = client.images.edit(
+                    model=MODEL,
+                    image=img_f,
+                    prompt=args.prompt,
+                    size=size,
+                    n=1,
+                )
+        except Exception as e:
+            print("图生图失败：" + str(e), file=sys.stderr)
+            return 1
+    else:
+        print("正在生成 " + args.platform + " 封面 (" + size + ") ...", file=sys.stderr)
+        try:
+            result = client.images.generate(
+                model=MODEL,
+                prompt=args.prompt,
+                size=size,
+                n=1,
+            )
+        except Exception as e:
+            print("生成失败：" + str(e), file=sys.stderr)
+            return 1
 
     data = result.data[0]
     image_bytes = None
