@@ -40,7 +40,6 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 **范例（已就位，可直接参照）：**
 
 - [标题生成方法论范例](references/exemplars/title-gen-v3.md) — 起标题前的文稿深度分析五步法，是所有产物「标题生成」模块的逻辑底座，每个生成的标题模块都要继承这套思路。
-- [B站财经账号范例](references/exemplars/bilibili-finance-video-skill.md) — 一个成熟的单垂类账号 skill 长什么样：人设锚定、跨工具适配写法、阶段化流程+人工确认点、统一输出文档、质量评估 loop、封面硬规则。这是本技能生成产物时要对标的质量与结构标准。
 
 **平台算法知识库（已就位，生成产物时"抄数据"的原始素材来源）：**
 
@@ -54,7 +53,7 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 
 **产物模板（已就位）：**
 
-- `references/skill-template/` — 产物 skill 的可填空模板（`*.tmpl` 文件，含各模块 `{{PLACEHOLDER}}`），生成规范见下方「生成规范」章节。
+- `references/skill-template/` — 产物 skill 的可填空模板（`*.tmpl` 文件，含各模块 `{{PLACEHOLDER}}`），生成规范见下方「生成规范」章节。除选题/标题/封面/文稿/审查/定位六个模块模板外，还含三块产物落地能力的模板：`workspace-guide.md.tmpl`（工作区目录契约与 `视频基础信息.md` schema）、`storyboard-plan.md.tmpl`（花生 AI Method-B 分镜）、`data-tracking.md.tmpl`（发布后多平台数据追踪），以及 `requirements.txt.tmpl`（Playwright/openpyxl/openai 依赖，按覆盖能力裁剪）。
 
 **方法论内核（已就位，生成时的逻辑抄数据来源）：**
 
@@ -62,6 +61,8 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 - [选题方法论](references/methodology/topic-selection.md) — 跨平台/跨垂类选题判断逻辑（受众动机模型、比较优势定位、热点结合、可持续选题库、反直觉点提炼），垂类专属选题框架（如财经七维度）在生成时按垂类现产。
 - [文稿方法论](references/methodology/script-writing.md) — 跨平台/跨垂类文稿判断逻辑（Hook结构、节奏控制与信息密度、完播设计、互动引导、兑现标题承诺），时长与竖屏/横屏形态由 `references/platforms/*.md` 在生成时注入。
 - [封面方法论](references/methodology/cover-design.md) — 跨平台/跨垂类封面判断逻辑（1秒法则、视觉焦点与留白、底图质量、人物表现力、大字文案4-8字、文案与标题互补、缩略图尺度验证、系列感固定排布、情绪配色原则、封面承诺-内容兑现闭环、数据可视化克制、多平台适配方法论、数据迭代、gpt-image-2 提示词写法），画幅尺寸与情绪-配色映射由 `references/platforms/*.md` 及本次确认的垂类在生成时注入。
+- [分镜方法论](references/methodology/peanut-production.md) — 花生 AI 只吃纯口播稿、中文标点规则 + Method-B 分镜粒度模型的底座；产物分镜模块（`storyboard-plan.md.tmpl`）在此之上展开完整五步：场景划分（=素材检索批次，只承载 `scene_design`）→ 分镜断句（逐字复用、`cloud_only`）→ **画面类型与画面描述下沉到分镜**（一镜一给 `b-roll`/`b-roll+mg`/`mg_frame`，三档=素材编排强度三档，核心问「单一素材能否自我陈述」）→ **内嵌 JSON 输出**（`scenes[].shots[]`）→ 两层 MG 画风（固定基因由封面 `{{COVER_DESIGN_LANGUAGE}}` 延续 × 情绪温度 × 本期视觉母题）。含逐字校验硬护栏、独立入口/无封面降级、子 agent 委任；A Roll 两档仅真人出镜形态启用。
+- [发布后数据追踪方法论](references/methodology/data-tracking.md) — 跨平台账号无关的发布后数据追踪逻辑（账号级 vs 稿件级、四平台技术分野与 cookie 机制、自包含落盘契约、回填后台链接、复盘归因框架、脚本去账号化三处），生成 `data-tracking.md.tmpl` 与移植脚本时的抄数据来源。
 
 ## 五阶段流程
 
@@ -183,6 +184,9 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 - `{{COVER_EMOTION_MAP}}` — 情绪-配色映射规则
 - `{{COVER_SERIES_LAYOUT}}` — 封面系列化固定排布规则
 - `{{COVER_DESIGN_LANGUAGE}}` — 账号默认「设计语言」（一次调动成套自洽审美的抓手，锁定构图/配色/材质/字体/风格五个基因维度），按垂类+人设现产，如"冷峻智库/时事周刊风"
+- `{{VIDEO_FORMAT}}` — 视频形态，如"纯口播驱动的解说短视频""图文混剪""真人出镜口播"，决定分镜是否需要 a-roll 类画面（真人形态才填充 storyboard 模板的三个 A Roll 条件占位符 `{{AROLL_ENUM_NOTE}}`/`{{AROLL_SOURCE_NOTE}}`/`{{AROLL_SECTION}}`，纯口播/图文形态整段省略，填法见下方「分镜模块」）
+- `{{STORYBOARD_STYLE}}` — 花生 AI 视觉风格取向（用于分镜 style JSON 的 visual_style 一栏取值参照），如"严肃财经调查/硬朗商务""明快清新生活流"
+- `{{DATA_TRACKING_PLATFORMS}}` — 本产物实际覆盖、要做发布后数据追踪的平台子集（抖音/小红书/B站/视频号里选），决定复制哪些平台脚本、data-tracking.md 保留哪些平台小节
 
 若模板库尚未就位（当前任务阶段可能遇到），先按同等结构手写产物 SKILL.md 及各模块文档，保证内容完整、可用，等模板库落地后再切换为"读取模板+填空"的方式，不因为模板缺失而生成一份内容不完整的产物。
 
@@ -224,6 +228,21 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 
 **内容资产库（每个产物必带）**：产物要能把每次产出的内容结构化沉淀到独立于 skill 的长期数据库 `~/.claude|.codex/content-db/<账号slug>/`。落地方式：把 `content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py` 复制进产物 `scripts/`（脚本从自身路径推导账号 slug 与数据根，无需改写）；产物的选题模块开头查库去重与找系列、文稿模块末尾自动存档、SKILL.md 说明回填与查库方式——这三处已在模板中就位，填模板时不要删。数据独立存放，重装产物 skill 不影响历史内容。
 
+**工作区脚手架（每个产物必带）**：产物要有一致的 workspace 落盘约定——从 `workspace-guide.md.tmpl` 填空生成产物的 `references/workspace-guide.md`。它定义每支视频落 `workspace/<日期_标题>/`（`视频基础信息.md` 统一文档 + `封面/` + `参考资料/` + `storyboard_plan.md` + `数据/`）、账号级落 `workspace/账号数据/<平台>.md` 与 `workspace/reports/`。占位符 `{{ACCOUNT_NAME}}`/`{{PLATFORMS}}`/`{{VIDEO_FORMAT}}`/`{{DATA_TRACKING_PLATFORMS}}`/`{{ACCOUNT_SLUG}}`。它是选题/文稿/标题/封面/分镜/数据六个模块落盘路径的唯一契约，content-db（跨重装长期库）与 workspace（单账号工作区）并存，产物 SKILL.md 的「工作区 workspace」章已点明分工。`validate_skill.py` 强制要求产物含 `references/workspace-guide.md`。
+
+**分镜模块（每个产物必带）**：从 `storyboard-plan.md.tmpl` 填空生成产物的 `references/storyboard-plan.md`，承载花生 AI Method-B 分镜方法论。底座是 `references/methodology/peanut-production.md`（纯口播稿、中文标点 + Method-B 粒度模型），模板展开完整五步：场景划分（=素材检索批次，只承载 `scene_design`）→ `cloud_only` 分镜断句 → **画面类型与画面描述下沉到分镜**（一镜一给 b-roll / b-roll+mg / mg_frame，三档=素材编排强度三档，核心问「单一素材能否自我陈述」）→ **内嵌 JSON 输出**（`scenes[].shots[]`，字段 `shot_id/visual_type/source/script/visual_description`）→ 两层 MG 画风（固定基因来自 `{{COVER_DESIGN_LANGUAGE}}` × 情绪温度 `{{COVER_EMOTION_MAP}}` × 每期视觉母题从封面核心意象延续）。含独立入口/无封面降级、子 agent 委任、**逐字校验硬护栏**（全片 `script` 拼接必须逐字等于口播稿）。
+- 常规占位符：`{{NICHE}}`/`{{VIDEO_FORMAT}}`/`{{COVER_DESIGN_LANGUAGE}}`/`{{STORYBOARD_STYLE}}`/`{{COVER_EMOTION_MAP}}`。
+- **A Roll 三个条件占位符按 `{{VIDEO_FORMAT}}` 填**：真人出镜形态（含"真人出镜口播""露脸"等）时填入——`{{AROLL_ENUM_NOTE}}`→"，真人形态另加 `a-roll` / `a-roll+mg` 两档"、`{{AROLL_SOURCE_NOTE}}`→"／ `a_roll`（A Roll 分镜用，表示要拍真人）"、`{{AROLL_SECTION}}`→完整 A Roll 附加方法论正文（两档定义、核心判定问句「观众需不需要看到是谁在说」、正面清单〔品牌锚/转场卖关子/态度落点/第一人称表态/CTA 结尾〕、反面清单、20-30% 露脸密度、拍摄规格描述〔景别/机位/情绪标签/提词器〕，去财经化）；纯口播/图文形态时三者一律填空串（`{{AROLL_ENUM_NOTE}}`/`{{AROLL_SOURCE_NOTE}}` 留空、`{{AROLL_SECTION}}` 填"本账号为纯口播/图文驱动形态，不启用 A Roll，全部分镜走上面三档 + `cloud_only`。"）。
+- 产物 SKILL.md 工作流总览把「分镜」列为审查 PASS 之后的一步（可单独触发；用户声明不成片则走到审查即停）。`validate_skill.py` 强制要求产物含 `references/storyboard-plan.md`。
+
+**发布后数据追踪（按覆盖平台条件配置）**：产物自带账号无关的发布后数据追踪能力，四平台脚本从本生成器 `scripts/` 里**按 `{{DATA_TRACKING_PLATFORMS}}` 覆盖的平台选择性复制**（不是全带）：
+- `_paths.py`（**必带**，只要产物做数据追踪就复制——它把 workspace 定位到产物自身 `<技能根>/workspace`，自包含、无环境变量）。
+- 抖音：`douyin_metrics.py`+`douyin_account.py`（+可选 `ingest_metrics.py` 手动 xlsx 备选）；小红书：`xiaohongshu_metrics.py`+`xiaohongshu_account.py`；B站：`bilibili_metrics.py`+`bilibili_account.py`；视频号：`channels_metrics.py`。
+- 这些脚本是"平台级"、账号无关，**近乎逐字复制、不做成 .tmpl**（生成器约定：脚本无条件复制、只有 .tmpl 填空）。落盘契约（`账号数据/<平台>.md`、各视频 `数据/<平台>_数据.md`、原始 JSON 归档）与 workspace-guide 完全一致。
+- 从 `data-tracking.md.tmpl` 填空生成产物 `references/data-tracking.md`（占位符 `{{ACCOUNT_SLUG}}`/`{{DATA_TRACKING_PLATFORMS}}`，只保留覆盖平台的小节）；产物 SKILL.md 的「发布后数据追踪」章已就位。
+- **cookie 不预置**：产物只带 `.gitignore` 排除 cookie 文件（`.douyin_cookie` 等）与 `*_raw_*.json`；真实 cookie 由用户装好后放在产物根目录，脚本从那里读。cookie 是登录态凭据，绝不预置、绝不入库、绝不回显内容。
+- 走 Playwright 的平台（抖音/小红书/视频号）需要 `requirements.txt`（从 `requirements.txt.tmpl` 裁剪，含 `playwright`；B站纯 requests 不需要）。若 SKILL.md 链接了 `references/data-tracking.md`，`validate_skill.py` 会强制要求 `scripts/_paths.py` 存在。
+
 **密钥处理（安全红线）**：产物用到的真实 API key，只能写进产物目录下、被 `.gitignore` 排除的真实 `.env` 文件里，由用户自己配置或本技能在生成时以环境变量形式写入该 git-ignored 文件；随技能一起提交/追踪的 `.env.example` 永远只放占位符（如 `LLM_GATEWAY_API_KEY=your_key_here`）。任何真实密钥值都不允许写进 SKILL.md 或任何会被版本控制追踪的文件。
 
 **生成审查模块（每个产物必带，与文稿模块配套）**：文稿写作与交付前终审已拆成两个独立模块——除 `references/script-writing.md` 外，还必须生成 `references/script-review.md`（从 `references/skill-template/script-review.md.tmpl` 填空而来），承载"换一双眼睛"的三层终审（硬门禁 / 受众复审 / 事实与立场终审）。产物 SKILL.md 的工作流总览里已把"审查"列为文稿之后的强制一步（模板已就位），填模板时不要删。**为什么拆出来**：交付前终审是整条链路最容易被"作者自己觉得没问题"的惯性跳过的一步，独立成模块 + 在 SKILL 流程里显式列为强制步，才压得住。写作模块管"写得好不好留不留得住"，审查模块管"敢不敢、站不站得住、能不能安全播出去"，两者配套缺一不可。
@@ -246,4 +265,6 @@ python3 scripts/validate_skill.py <产物目录>
 - 产物必须生成 `references/script-review.md`（独立审查模块），且 SKILL.md 工作流总览把"审查"列为文稿之后的强制一步。审查模块须含三层：硬门禁、受众复审、事实与立场终审（真信源不许编造/反直觉结论因果闭环/敏感题立场落安全区/可执行正向收尾）。缺审查模块或流程未列审查步，视为生成未完成。
 - 封面生成脚本（`generate_cover.py`）及产物任何文件中，**绝不硬编码真实 API key**——密钥只能来自环境变量或用户自己配置的 git-ignored `.env`。
 - 产物必须具备可运行的内容资产库能力：`content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py` 四个脚本齐全并能正确读写 `content-db/<slug>/`，选题模块查库去重、文稿模块自动存档两处衔接不能缺失。
+- 产物必须含 `references/workspace-guide.md` 与 `references/storyboard-plan.md`（无论垂类），且 SKILL.md 工作流总览把「分镜」列在审查之后。分镜模块的逐字校验硬护栏（所有分镜 `script` 按序拼接逐字等于口播稿）与「画面类型/画面描述下沉到分镜」的粒度模型不能改回旧的场景级粒度。缺任一 reference 或流程未列分镜步，视为生成未完成。
+- 覆盖发布后数据追踪的产物：必带 `scripts/_paths.py` 且它把 workspace 定位到产物自身（不跨 skill、不依赖环境变量）；落盘路径必须与 `workspace-guide.md` 一致（`账号数据/<平台>.md`、各视频 `数据/<平台>_数据.md`）；数据追踪脚本不硬编码账号名，cookie 不预置、由 `.gitignore` 排除。
 - 产物必须通过 `scripts/validate_skill.py` 校验，且不遗留任何已知问题。

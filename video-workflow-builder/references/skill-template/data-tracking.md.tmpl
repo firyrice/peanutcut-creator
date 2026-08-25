@@ -1,0 +1,154 @@
+# 发布后数据追踪手册（多平台账号级 + 稿件级）
+
+本文件是**视频发布之后**追踪后台数据的完整说明。这是一条独立于创作的工作流——和"把选题变成视频"是两件事。SKILL 正文只留触发语→脚本速查表，接口字段、cookie、范围规则都查这里。
+
+覆盖平台：{{DATA_TRACKING_PLATFORMS}}。各平台数据单独脚本、单独落盘。**稿件级数据一律落进该视频文件夹下的 `数据/` 子目录、一平台一文件、命名「平台_数据.md」**；**稿件原始 JSON/xlsx 归档进 `数据/数据_raw/`，账号级原始 JSON 归档 `账号数据/raw/`**。落盘位置就在本技能自己的 `workspace/` 下（脚本用 `scripts/_paths.py` 自动定位，见下），路径契约与 [workspace-guide.md](workspace-guide.md) 完全一致。
+
+| 平台 | 账号级落盘 | 稿件级落盘 | cookie 文件 | 是否需浏览器 |
+|---|---|---|---|---|
+| 抖音 | `账号数据/抖音.md` | 各视频 `数据/抖音_数据.md` | `.douyin_cookie` | Playwright |
+| 小红书 | `账号数据/小红书.md` | 各视频 `数据/小红书_数据.md` | `.xiaohongshu_cookie` | Playwright |
+| B站 | `账号数据/B站.md` | 各视频 `数据/B站_数据.md` | `.bilibili_cookie` | 纯 requests |
+| 视频号 | `账号数据/视频号.md` | 各视频 `数据/视频号_数据.md`（`--video` 稿件级） | `.channels_cookie` | Playwright |
+
+> 只保留本技能实际覆盖平台对应的行与脚本；未覆盖的平台脚本可不复制。
+
+所有 cookie 文件放在**本技能根目录**、已 gitignore。**过期报错时，让用户从浏览器复制对应平台的 `document.cookie` 覆盖该文件即可，脚本无需改动。** cookie 是登录态凭据，绝不入库、绝不回显内容。
+
+## 脚本定位（自包含）
+
+脚本随本技能装在 `scripts/` 下，数据写回本技能自己的 `workspace/`。`scripts/_paths.py` 把 workspace 根解析为 `<技能根>/workspace`（`技能根 = dirname(dirname(abspath(_paths.py)))`），无需任何环境变量、无需手动传路径。**不要假设 shell 的 cwd 是技能目录**——运行前先解析技能根，用绝对路径调用：
+
+```bash
+SKILL_DIR="$HOME/.claude/skills/{{ACCOUNT_SLUG}}-workflow"
+[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.codex/skills/{{ACCOUNT_SLUG}}-workflow"
+```
+
+下文示例为简洁写成 `scripts/xxx.py`，实际调用替换为 `"$SKILL_DIR/scripts/xxx.py"`。
+
+## 「更新数据」触发范围规则（各平台通用）
+
+用户说"更新数据""刷新数据"时，**更新范围由用户当次描述决定**，不要自作主张扩大或缩小：
+
+- **点名某支/某几支** → 只对被点名的视频跑稿件级脚本，`--url` 从各自 `视频基础信息.md` 的 `创作后台链接（各平台）` 块对应平台行读。
+- **说"更新所有""全部刷一遍"** → 遍历 `workspace/*/视频基础信息.md`，对每支后台链接不是"待填"的依次跑（一支 cookie 失效/抓空不中断其余，最后汇总哪几支成功、哪几支失败）。
+- **只说"更新数据"没指范围** → 默认更新所有已发布的；范围有歧义时先问一句确认，别默认全量猛跑。
+- **未指平台时先确认平台**——别把多平台或稿件级/账号级混淆。
+- 若某支后台链接还是"待填" → 提示用户补链接，别跳过时不吭声。
+- **账号级是另一回事**（触发语"更新账号数据""更新B站账号数据"等），走各自的 account 脚本。
+
+## 发布后第一件事：回填创作后台链接
+
+视频发到某平台后，用户给出创作者后台的稿件/作品数据页链接时，**第一件事就是把它回填进该视频 `视频基础信息.md` 元信息里 `创作后台链接（各平台）` 块的对应平台行**（同时能确认的话回填发布日期与视频链接）。这条链接是后续「更新数据」的入口，脚本从这里读 `--url`，必须落档。
+
+---
+
+## 抖音
+
+### 稿件级（首选：自动抓取）
+
+```bash
+python3 scripts/douyin_metrics.py --url "<作品详情页链接>" --video "<创建日期>_<最终标题>" --save-raw
+```
+
+Playwright 注入会话 cookie 打开作品详情页（形如 `https://creator.douyin.com/creator-micro/work-management/work-detail/<item_id>`），自动点开「流量分析」「评论管理」两个 tab，截获后台签名接口 JSON，写入该文件夹 `数据/抖音_数据.md`，原始 JSON 归档 `数据/数据_raw/`。产出六节：①指标总览（播放/点赞/评论/分享/收藏/净涨粉/完播率/封面点击率/2s跳出率等，来自 `item/mget`）②与本账号近期作品对标（`item_compare`）③逐小时趋势（`metrics_trend`）④流量来源占比及对比7日（`item/play/source`）⑤进度分析逐段快进率/回看率、标出最大流失段（`progress/analysis`）⑥高赞评论 Top 20（`comment/list/select`）。
+
+- `--video` 传带日期前缀的完整文件夹名，须与 workspace 下文件夹名完全一致。
+- 报"未抓到 item/mget 数据"→ cookie 过期，让用户重导。
+- 调试可加 `--dry-run`（只打印不落盘）或 `--show`（显示浏览器窗口）。
+
+### 稿件级（备选：手动 xlsx 导入）
+
+拿不到链接或需要后台独有进度字段时，从创作者后台手动导出 xlsx，跑：
+
+```bash
+python3 scripts/ingest_metrics.py --video "<创建日期>_<最终标题>" 导出1.xlsx 导出2.xlsx
+```
+
+生成/更新该文件夹 `数据/抖音_数据.md`，原件归档进 `数据/数据_raw/`。
+
+### 账号级
+
+触发语"更新账号数据""刷新账号数据"：
+
+```bash
+python3 scripts/douyin_account.py --save-raw
+```
+
+注入 cookie 打开创作者数据中心，fetch 两个 `janus/creator/data/overview/dashboard` 接口（默认近 30 天，`--days` 可改），把账号级每日数据写进 `账号数据/抖音.md`，原始 JSON 归档 `账号数据/raw/`。产出：核心指标总览 + 三个逐日趋势表（每日互动/每日粉丝/每日质量）。
+
+---
+
+## 小红书
+
+创作者后台是登录态签名接口（`x-s`/`x-t` 签名，纯 requests 算不了），用 Playwright 注入 cookie、在页面 `response` 事件里截 JSON。账号昵称从 `galaxy/user/info` 动态取，脚本不硬编码账号名。
+
+### 账号级
+
+```bash
+python3 scripts/xiaohongshu_account.py --save-raw
+```
+
+抓 `datacenter/account/base`（近7天+近30天各带环比）+ `audience/source/account`（流量来源）+ `galaxy/user/info`（昵称/小红书号），写进 `账号数据/小红书.md`。产出：近7天/近30天两段总览 + 流量来源 + 近7天逐日趋势。
+
+### 稿件级
+
+用户给一条笔记数据页链接（含 noteId，形如 `https://creator.xiaohongshu.com/statistics/note-detail?noteId=...`）：
+
+```bash
+python3 scripts/xiaohongshu_metrics.py --url "<链接>" --video "<日期>_<标题>" --save-raw
+```
+
+抓 `datacenter/note/base` + `note/audience/source`。产出：指标总览 + 流量来源 + 逐小时互动/逐小时质量。写进该视频 `数据/小红书_数据.md`。
+
+---
+
+## B站
+
+后台接口是普通 cookie 鉴权 JSON、无签名，脚本纯 `requests` 即可，不用 Playwright。cookie 至少含 `SESSDATA`/`bili_jct`/`DedeUserID`；过期报错（`code!=0` 或"接口未返回 JSON"）就重导。
+
+### 账号级
+
+```bash
+python3 scripts/bilibili_account.py --save-raw
+```
+
+抓 `index/stat`（九项累计+昨日新增：粉丝/播放/点赞/投币/收藏/分享/评论/弹幕/充电）+ `data/pandect`（近 30 天逐日趋势），写进 `账号数据/B站.md`。
+
+### 稿件级
+
+用户给一条稿件数据页链接（含 BV 号，形如 `https://member.bilibili.com/platform/upload-manager/article/data/BV...`）：
+
+```bash
+python3 scripts/bilibili_metrics.py --url "<链接>" --video "<日期>_<标题>" --save-raw
+```
+
+抓 `web-interface/view`+`data/archive`+`data/base`。产出：指标总览、播放行为、粉丝vs游客构成、观看地域Top10、账号观众画像（B站画像仅账号级）。写进该视频 `数据/B站_数据.md`。
+
+---
+
+## 视频号（微信）
+
+后台 `post/post_list` 接口**一次返回全部视频完整指标**，无需逐条点开——账号级抓一次就把每支稿件级数据也拿到了。视频号助手（`channels.weixin.qq.com`）是 SPA、接口带登录态签名，用 Playwright 注入 cookie、在 `response` 事件里截 JSON。cookie 双域注入（`.weixin.qq.com`/`.qq.com`），至少含 `sessionid`/`wxuin`；过期报"未抓到 post_list 视频数据"就重导。
+
+### 账号级（默认）
+
+```bash
+python3 scripts/channels_metrics.py --save-raw
+```
+
+先开账号数据页抓 `get-finder-total-statics`（总粉丝）+ `new_post_total_data`（近7天分来源逐日互动），再开作品列表页抓 `post/post_list`（全部视频），写进 `账号数据/视频号.md`，原始 JSON 归档 `账号数据/raw/`。产出：账号总览、近7天互动合计、播放来源占比、近7天逐日播放、视频明细（按播放降序）。
+
+### 稿件级（点名某支视频）
+
+```bash
+python3 scripts/channels_metrics.py --video "<创建日期>_<最终标题>" --save-raw
+```
+
+抓同一份 `post/post_list`，按标题匹配出这一支，写进该视频 `数据/视频号_数据.md`。注意：视频号后台在稿件级**不提供逐小时趋势与流量来源细分**（只在账号级 `new_post_total_data` 里有），故稿件文件只落核心指标，这是接口限制、非脚本缺陷。匹配不到就提示用户核对标题。
+
+---
+
+## 分析复盘
+
+需要分析"某视频为啥流量高但吸粉差""为啥被限流"这类问题时，读账号级 `账号数据/<平台>.md` 和相关视频 `数据/<平台>_数据.md`，要更细回查 `数据_raw/` 原始 JSON。把报告写进 `workspace/reports/`（命名 `YYYY-MM-DD_主题.md`，模板见 [workspace-guide.md](workspace-guide.md)），并把稳定规律沉淀下来反哺后续创作。

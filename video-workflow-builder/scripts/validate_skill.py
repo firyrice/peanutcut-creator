@@ -47,6 +47,22 @@ def validate_skill_dir(path):
         if not os.path.isfile(os.path.join(scripts_dir, name)):
             problems.append("missing required script: scripts/%s" % name)
 
+    # Every generated product carries the workspace + storyboard contracts,
+    # regardless of niche.
+    required_refs = ["storyboard-plan.md", "workspace-guide.md"]
+    refs_dir = os.path.join(path, "references")
+    for name in required_refs:
+        if not os.path.isfile(os.path.join(refs_dir, name)):
+            problems.append("missing required reference: references/%s" % name)
+
+    # If the product ships post-publish data tracking, its scripts locate the
+    # workspace via _paths.py — so that helper must be present.
+    if os.path.isfile(os.path.join(refs_dir, "data-tracking.md")) or \
+            "references/data-tracking.md" in text:
+        if not os.path.isfile(os.path.join(scripts_dir, "_paths.py")):
+            problems.append(
+                "data-tracking is present but missing scripts/_paths.py")
+
     return problems
 
 

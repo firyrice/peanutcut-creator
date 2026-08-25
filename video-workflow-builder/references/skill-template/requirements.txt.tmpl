@@ -1,0 +1,11 @@
+# 本技能的 Python 依赖。装：python3 -m pip install -r requirements.txt
+# 说明：仅在产物覆盖对应能力时才需要——
+#   - 发布后数据追踪（抖音/小红书/视频号走 Playwright 抓后台签名接口）：playwright
+#     装完还需一次 `python3 -m playwright install chromium` 拉浏览器内核。
+#     （B站纯 requests，不依赖 playwright。）
+#   - 抖音手动 xlsx 导入（ingest_metrics.py 备选路径）：openpyxl
+#   - 封面生成（generate_cover.py 调图像模型）：openai
+# 不覆盖数据追踪/封面的产物可删掉对应行。版本按需放宽，勿用无上限的裸 * 。
+playwright>=1.40
+openpyxl>=3.1
+openai>=1.0

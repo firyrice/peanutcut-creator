@@ -6,6 +6,9 @@ _REQUIRED = ["content_db.py", "archive_content.py", "query_db.py",
              "web_search.py"]
 
 
+_REQUIRED_REFS = ["storyboard-plan.md", "workspace-guide.md"]
+
+
 def _make_skill(tmp_path, with_scripts):
     (tmp_path / "SKILL.md").write_text(
         "---\nname: x-workflow\ndescription: d\n---\n# x\n", encoding="utf-8")
@@ -14,6 +17,10 @@ def _make_skill(tmp_path, with_scripts):
         sd.mkdir()
         for name in _REQUIRED:
             (sd / name).write_text("# stub\n", encoding="utf-8")
+        rd = tmp_path / "references"
+        rd.mkdir()
+        for name in _REQUIRED_REFS:
+            (rd / name).write_text("# stub\n", encoding="utf-8")
 
 
 def test_missing_scripts_reported(tmp_path):
