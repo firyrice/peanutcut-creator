@@ -1,4 +1,4 @@
-# peanutcut-creator
+# huasheng-skill-creator
 
 **视频创作工作流生成器** —— 一个「生成 skill 的 skill」。
 
@@ -18,8 +18,8 @@
 ## 仓库结构
 
 ```
-peanutcut-creator/
-├── video-workflow-builder/     # ⭐ skill 本体（安装这个目录）
+huasheng-skill-creator/
+├── huasheng-skill-creator/     # ⭐ skill 本体（安装这个目录）
 │   ├── SKILL.md                # 生成器主流程（五阶段：访谈→研究→诊断→生成→交付）
 │   ├── README.md               # skill 详细使用说明
 │   ├── references/
@@ -34,9 +34,9 @@ peanutcut-creator/
 
 ## 快速开始
 
-把 `video-workflow-builder/` 目录放到 Claude Code 的 skills 目录下：
+把 `huasheng-skill-creator/` 目录放到 Claude Code 的 skills 目录下：
 
-- **Claude Code**：`~/.claude/skills/video-workflow-builder`
+- **Claude Code**：`~/.claude/skills/huasheng-skill-creator`
 
 安装封面生成依赖：
 
@@ -46,7 +46,7 @@ pip install openai
 
 然后直接说出需求即可触发，例如："我想在小红书做家庭理财内容，人设是二胎宝妈"。
 
-详细使用说明见 [`video-workflow-builder/README.md`](video-workflow-builder/README.md)。
+详细使用说明见 [`huasheng-skill-creator/README.md`](huasheng-skill-creator/README.md)。
 
 ## 安全说明
 

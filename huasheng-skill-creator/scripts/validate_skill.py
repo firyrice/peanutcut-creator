@@ -55,6 +55,12 @@ def validate_skill_dir(path):
         if not os.path.isfile(os.path.join(refs_dir, name)):
             problems.append("missing required reference: references/%s" % name)
 
+    # Every product ships an account long-memory doc (huasheng.md), read before
+    # any work: persona/positioning + per-account brand phrases + accumulated
+    # rules. It lives under workspace/, not references/.
+    if not os.path.isfile(os.path.join(path, "workspace", "huasheng.md")):
+        problems.append("missing account memory: workspace/huasheng.md")
+
     # If the product ships post-publish data tracking, its scripts locate the
     # workspace via _paths.py — so that helper must be present.
     if os.path.isfile(os.path.join(refs_dir, "data-tracking.md")) or \

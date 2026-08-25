@@ -74,6 +74,8 @@ def _make_valid_skill(d, skill_md=None, with_paths=True):
     # 校验器现在还要求产物自带一组必需脚本，合法样本得把它们补齐
     for name in _REQUIRED_SCRIPTS:
         _write(os.path.join(d, "scripts", name), "# stub\n")
+    # 每个产物必带账号长记忆 workspace/huasheng.md
+    _write(os.path.join(d, "workspace", "huasheng.md"), "# huasheng\n")
     if with_paths:
         _write(os.path.join(d, "scripts", "_paths.py"), "# stub\n")
 
@@ -91,6 +93,14 @@ def test_missing_storyboard_reference_reported():
         os.remove(os.path.join(d, "references", "storyboard-plan.md"))
         problems = validate_skill_dir(d)
         assert any("storyboard-plan.md" in p for p in problems)
+
+
+def test_missing_huasheng_reported():
+    with tempfile.TemporaryDirectory() as d:
+        _make_valid_skill(d)
+        os.remove(os.path.join(d, "workspace", "huasheng.md"))
+        problems = validate_skill_dir(d)
+        assert any("huasheng.md" in p for p in problems)
 
 
 def test_data_tracking_without_paths_reported():

@@ -1,4 +1,4 @@
-# video-workflow-builder
+# huasheng-skill-creator
 
 一个"生成 skill 的 skill"。它不直接帮你选题、写文稿、做封面——它把这一整套能力，按照你的**平台、垂类、人设**量身定制成一个独立、可安装、开箱即用的专属视频创作工作流 skill，覆盖从选题到文稿、标题、封面的完整链路。
 
@@ -14,10 +14,10 @@
 
 ## 安装
 
-把整个 `video-workflow-builder/` 目录放到对应工具的 skills 目录下：
+把整个 `huasheng-skill-creator/` 目录放到对应工具的 skills 目录下：
 
-- **Claude Code**：`~/.claude/skills/video-workflow-builder`
-- **Codex**：`~/.codex/skills/video-workflow-builder`
+- **Claude Code**：`~/.claude/skills/huasheng-skill-creator`
+- **Codex**：`~/.codex/skills/huasheng-skill-creator`
 
 两个环境都通过读取 `SKILL.md` 识别技能，跨工具适配细节（联网/写文件/跑脚本的等价能力映射）已经写在 `SKILL.md` 里，不需要额外配置。
 
@@ -70,7 +70,7 @@ pip install openai
 本仓库自带的校验和测试：
 
 ```bash
-cd video-workflow-builder
+cd huasheng-skill-creator
 python3 -m pytest -q                     # 单元测试（validate_skill / generate_cover）
 python3 scripts/validate_skill.py .      # 结构校验（frontmatter + 内部链接）
 python3 scripts/validate_skill.py <产物目录>   # 校验任意生成产物

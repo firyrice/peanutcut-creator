@@ -57,7 +57,7 @@ def _load_api_base():
 def fetch_platform(base, platform, timeout=DEFAULT_TIMEOUT):
     """拉单个平台热榜，返回 (title, [items])。失败抛异常，绝不吞掉。"""
     url = "%s/%s" % (base, platform)
-    req = urllib.request.Request(url, headers={"User-Agent": "peanutcut-hotlist/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "huasheng-hotlist/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         payload = json.loads(resp.read().decode("utf-8"))
     # DailyHotApi 正常返回 {"code":200,"title":...,"data":[{title,hot,...}]}

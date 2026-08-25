@@ -1,5 +1,5 @@
 ---
-name: video-workflow-builder
+name: huasheng-skill-creator
 description: 视频创作工作流生成器。当用户想为自己的账号定制一套完整的视频创作流程（选题、文稿、标题、封面），或说"帮我做个账号工作流""定制视频流程""我想在抖音/B站/小红书/视频号/百家号做XX内容"时使用。它只问三件事（平台、垂类、人设），其余靠联网研究补齐，先给出账号定位诊断供确认，再生成一套可安装使用的专属工作流 skill。
 ---
 
@@ -7,31 +7,31 @@ description: 视频创作工作流生成器。当用户想为自己的账号定�
 
 这是一个"生成 skill 的 skill"。它不直接帮你写选题、写文稿、做封面——它做的是把这一整套能力，按照你的平台、垂类和人设，量身定制成一个**独立、可安装、开箱即用**的专属工作流 skill，覆盖从选题到文稿、标题、封面的完整链路。你只需要回答三个最基础的问题，剩下的受众画像、爆款打法、变现路径、平台算法动向，它会自己联网研究补齐，先给你一份账号定位诊断和策略提案确认方向，确认后再落地生成产物。目标是让每个账号拿到的都不是一份通用模板，而是一套真正吃透了自己平台算法和垂类打法的作战手册。
 
-## 跨工具适配
+## 工具约定
 
-本技能同时支持 **Claude Code** 和 **Codex**（以及其它遵循 SKILL.md 规范的 agent）。下文提到具体工具名时，请按你当前所在的运行环境映射到等价能力，不要因为"没有叫这个名字的工具"就跳过步骤：
+本技能只在 **Claude Code** 里运行。下文约定的工具与路径都是 Claude Code 环境下的：
 
-- **联网搜索（统一走网关，别用自带 WebSearch）**：本技能的联网搜索**一律通过内置的 `scripts/web_search.py`（qianfan web search 网关）**，**不要**直接用 Claude Code 自带的 `WebSearch` 或 Codex 自带的联网搜索工具。这样搜索源可控、结果结构统一、跨 agent 环境行为一致。调用方式：`python3 "$SKILL_DIR/scripts/web_search.py" "搜索词" [--top N] [--json]`（密钥从技能目录 `.env` 的 `QIANFAN_WEBSEARCH_API_KEY` 读取，已随技能配好）。若网关报错/无密钥，如实告知用户无法获取实时数据，退回内部知识作研究依据，不要用记忆里的旧数据冒充实时情报，也不要偷偷改用自带 WebSearch。
-- **抓取网页正文**：优先看 `web_search.py` 每条结果自带的 `content` 字段（网关已摘出约前 1000 字，判断相关性/快速扫风向足够）。需要读**完整全文**（网关 content 只有全文约两成、且从中间截断）时，用 `python3 "$SKILL_DIR/scripts/web_search.py" <url> --full [--max-chars N]` 本机直抓提纯——**不要用 Claude Code/Codex 自带的 WebFetch**：它跑在云端，对国内站（163/百家号/东方财富等）会系统性报"无法确认域名安全"而失败，本机抓取则没有这个问题。
-- **写文件**：Claude Code 用 `Write` 工具；Codex 直接用其文件写入能力（或 `apply_patch`）。凡说"用 Write 工具生成某文件"，即指"用当前环境的文件写入能力落地该文件"。生成产物 skill 时涉及的每一个文件（SKILL.md、各模块文档、脚本、配置）都要真实落地到磁盘，不能只在对话里描述。
-- **跑脚本**：两个环境都通过 shell 执行 `python3`。脚本路径见下方「脚本路径」——一律用技能目录的绝对路径，不要假设当前工作目录就是技能目录。
+- **联网搜索（统一走网关，别用自带 WebSearch）**：本技能的联网搜索**一律通过内置的 `scripts/web_search.py`（qianfan web search 网关）**，**不要**用 Claude Code 自带的 `WebSearch` 工具。这样搜索源可控、结果结构统一。调用方式：`python3 "$SKILL_DIR/scripts/web_search.py" "搜索词" [--top N] [--json]`（密钥从技能目录 `.env` 的 `QIANFAN_WEBSEARCH_API_KEY` 读取，已随技能配好）。若网关报错/无密钥，如实告知用户无法获取实时数据，退回内部知识作研究依据，不要用记忆里的旧数据冒充实时情报，也不要偷偷改用自带 WebSearch。
+- **抓取网页正文**：优先看 `web_search.py` 每条结果自带的 `content` 字段（网关已摘出约前 1000 字，判断相关性/快速扫风向足够）。需要读**完整全文**（网关 content 只有全文约两成、且从中间截断）时，用 `python3 "$SKILL_DIR/scripts/web_search.py" <url> --full [--max-chars N]` 本机直抓提纯——**不要用 Claude Code 自带的 WebFetch**：它跑在云端，对国内站（163/百家号/东方财富等）会系统性报"无法确认域名安全"而失败，本机抓取则没有这个问题。
+- **写文件**：用 `Write` 工具落地文件。凡说"用 Write 工具生成某文件"，即指真的把文件写入磁盘。生成产物 skill 时涉及的每一个文件（SKILL.md、各模块文档、脚本、配置）都要真实落地到磁盘，不能只在对话里描述。
+- **跑脚本**：通过 shell 执行 `python3`。脚本路径见下方「脚本路径」——一律用技能目录的绝对路径，不要假设当前工作目录就是技能目录。
 
 ### 脚本路径
 
-本技能自身的脚本（结构校验器 `validate_skill.py` 等）随技能一起安装，位于技能目录下的 `scripts/`。**不要假设 shell 的当前工作目录是技能目录**（Codex/Claude Code 运行时 cwd 通常是用户项目目录）。运行脚本前先定位技能目录，用绝对路径调用。技能目录按环境查找：
+本技能自身的脚本（结构校验器 `validate_skill.py` 等）随技能一起安装，位于技能目录下的 `scripts/`。**不要假设 shell 的当前工作目录是技能目录**（Claude Code 运行时 cwd 通常是用户项目目录）。运行脚本前先定位技能目录，用绝对路径调用。技能目录：
 
-- Claude Code：`~/.claude/skills/video-workflow-builder`
-- Codex：`~/.codex/skills/video-workflow-builder`
+```bash
+SKILL_DIR="$HOME/.claude/skills/huasheng-skill-creator"
+```
 
 推荐用一句话解析出脚本根目录再调用，避免路径出错：
 
 ```bash
-SKILL_DIR="$HOME/.claude/skills/video-workflow-builder"
-[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.codex/skills/video-workflow-builder"
+SKILL_DIR="$HOME/.claude/skills/huasheng-skill-creator"
 python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 ```
 
-下文示例为简洁起见写成 `scripts/xxx.py`，实际调用时请替换为 `"$SKILL_DIR/scripts/xxx.py"`。生成的产物 skill 安装后同理有自己的技能目录（`~/.claude/skills/<账号名>-workflow` 或 `~/.codex/skills/<账号名>-workflow`），产物内部脚本调用时也要按这个规则解析绝对路径——这一点会写入产物自身的 SKILL.md，此处先记在心里。
+下文示例为简洁起见写成 `scripts/xxx.py`，实际调用时请替换为 `"$SKILL_DIR/scripts/xxx.py"`。生成的产物 skill 安装后同理有自己的技能目录（`~/.claude/skills/<账号名>-workflow`），产物内部脚本调用时也要按这个规则解析绝对路径——这一点会写入产物自身的 SKILL.md，此处先记在心里。
 
 ## 内置资源索引
 
@@ -63,6 +63,7 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 - [封面方法论](references/methodology/cover-design.md) — 跨平台/跨垂类封面判断逻辑（1秒法则、视觉焦点与留白、底图质量、人物表现力、大字文案4-8字、文案与标题互补、缩略图尺度验证、系列感固定排布、情绪配色原则、封面承诺-内容兑现闭环、数据可视化克制、多平台适配方法论、数据迭代、gpt-image-2 提示词写法），画幅尺寸与情绪-配色映射由 `references/platforms/*.md` 及本次确认的垂类在生成时注入。
 - [分镜方法论](references/methodology/peanut-production.md) — 花生 AI 只吃纯口播稿、中文标点规则 + Method-B 分镜粒度模型的底座；产物分镜模块（`storyboard-plan.md.tmpl`）在此之上展开完整五步：场景划分（=素材检索批次，只承载 `scene_design`）→ 分镜断句（逐字复用、`cloud_only`）→ **画面类型与画面描述下沉到分镜**（一镜一给 `b-roll`/`b-roll+mg`/`mg_frame`，三档=素材编排强度三档，核心问「单一素材能否自我陈述」）→ **内嵌 JSON 输出**（`scenes[].shots[]`）→ 两层 MG 画风（固定基因由封面 `{{COVER_DESIGN_LANGUAGE}}` 延续 × 情绪温度 × 本期视觉母题）。含逐字校验硬护栏、独立入口/无封面降级、子 agent 委任；A Roll 两档仅真人出镜形态启用。
 - [发布后数据追踪方法论](references/methodology/data-tracking.md) — 跨平台账号无关的发布后数据追踪逻辑（账号级 vs 稿件级、四平台技术分野与 cookie 机制、自包含落盘契约、回填后台链接、复盘归因框架、脚本去账号化三处），生成 `data-tracking.md.tmpl` 与移植脚本时的抄数据来源。
+- [账号长记忆方法论](references/methodology/account-memory.md) — 每个产物必带的 `workspace/huasheng.md`（开工前必读的长记忆）机制：生成时预置死账号内核（人设/定位/受众）+ 按账号定制的品牌口令，运行中生长流量基线与带置信度的累积规律；打通"数据→复盘→反哺创作"闭环的后半段。生成 `account-memory.md.tmpl` 与定制品牌口令时的抄数据来源。
 
 ## 五阶段流程
 
@@ -78,7 +79,7 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 
 **明确不要问**受众画像、差异化定位、变现路径——这些属于研究阶段和诊断阶段的产出，不是访谈阶段该问用户的。用户往往自己也说不清楚"目标受众是谁""怎么和同类账号差异化"，把这些问题甩给用户只会让访谈变得又长又低效。三件事问完、拿到答案就立刻进入阶段1，不要追加更多访谈问题。
 
-**提问方式**：访谈这三件事一律用**普通对话文字**直接问（"你想在哪个平台做？做什么方向？以什么身份出镜？"），**不要调用交互式选择控件/表单类工具**——本技能跨 Claude Code 与 Codex 等多种环境运行，这类控件并非各环境都稳定支持，纯文本提问在任何环境都可靠，也让用户能一句话把三件事一起说全。
+**提问方式**：访谈这三件事一律用**普通对话文字**直接问（"你想在哪个平台做？做什么方向？以什么身份出镜？"），**不要调用交互式选择控件/表单类工具**——纯文本提问最直接可靠，也让用户能一句话把三件事一起说全。
 
 若用户在一句话里已经把三件事都说全了（例如"我想在抖音做美食测评账号，人设是社区大厨"），直接确认理解无误后进入阶段1，不必再走一轮问答。
 
@@ -114,7 +115,7 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 
 **在用户明确确认之前，绝不进入阶段3生成产物。** 用户如果只是追问细节或提小修改，就地调整诊断文本，再次确认，不要自行判断"应该没问题了"就往下走。
 
-诊断展示与确认同样用**普通对话文字**（把诊断三项写成正文段落 + 一句邀请确认），**不要把诊断项塞进交互式选择控件/表单类工具**——理由同阶段0：跨环境可靠、也让用户能自由说"哪里再调"，而不是被限定在几个预设选项里。
+诊断展示与确认同样用**普通对话文字**（把诊断三项写成正文段落 + 一句邀请确认），**不要把诊断项塞进交互式选择控件/表单类工具**——理由同阶段0：纯文本最可靠，也让用户能自由说"哪里再调"，而不是被限定在几个预设选项里。
 
 **诊断提案范例**（假设阶段0拿到的答案是：平台=抖音、垂类=职场、人设="35岁大厂中层，裸辞后做职业咨询的过来人前辈"）：
 
@@ -147,7 +148,7 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 
 产物生成并通过校验后，向用户说明：
 
-- **安装路径**：产物 skill 生成在哪个目录，需要放到 `~/.claude/skills/<账号名>-workflow`（Claude Code）或 `~/.codex/skills/<账号名>-workflow`（Codex）下才能被识别为可用技能
+- **安装路径**：产物 skill 生成在哪个目录，需要放到 `~/.claude/skills/<账号名>-workflow` 下才能被识别为可用技能
 - **触发词**：产物 SKILL.md 里配置了哪些触发词/触发场景，用户之后怎么一句话唤起它
 - **各模块独立调用方式**：选题、标题、封面、文稿四个模块除了走完整流程，也可以单独唤起（比如用户已经有选题只想起标题，或已经定了标题只想生成封面），逐一说明怎么单独触发
 - **API key 设置方式**：产物里涉及联网抓取或封面生成的脚本依赖哪个环境变量/`.env` 文件，怎么填入真实密钥（`.env.example` 只是占位模板，真实密钥要写进用户自己的、已被 `.gitignore` 排除的 `.env` 文件，不会被本技能记录或上传）
@@ -187,6 +188,8 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 - `{{VIDEO_FORMAT}}` — 视频形态，如"纯口播驱动的解说短视频""图文混剪""真人出镜口播"，决定分镜是否需要 a-roll 类画面（真人形态才填充 storyboard 模板的三个 A Roll 条件占位符 `{{AROLL_ENUM_NOTE}}`/`{{AROLL_SOURCE_NOTE}}`/`{{AROLL_SECTION}}`，纯口播/图文形态整段省略，填法见下方「分镜模块」）
 - `{{STORYBOARD_STYLE}}` — 花生 AI 视觉风格取向（用于分镜 style JSON 的 visual_style 一栏取值参照），如"严肃财经调查/硬朗商务""明快清新生活流"
 - `{{DATA_TRACKING_PLATFORMS}}` — 本产物实际覆盖、要做发布后数据追踪的平台子集（抖音/小红书/B站/视频号里选），决定复制哪些平台脚本、data-tracking.md 保留哪些平台小节
+- `{{BRAND_OPENING}}` — 开场品牌锚（每期逐字复用的开场固定口令，放在 hook 之后）。**必须按账号名+人设现场定制**，含账号名或其变体、口吻贴人设、一句话能记住，绝不能套用"大家好欢迎来到我的频道"这类通用模板。详见 [账号长记忆方法论](references/methodology/account-memory.md) 的品牌口令一节
+- `{{BRAND_CLOSING}}` — 结尾价值锚 / 关注引导（每期逐字复用的结尾固定口令，承担价值总结+关注引导），同样按账号定制、贴人设
 
 若模板库尚未就位（当前任务阶段可能遇到），先按同等结构手写产物 SKILL.md 及各模块文档，保证内容完整、可用，等模板库落地后再切换为"读取模板+填空"的方式，不因为模板缺失而生成一份内容不完整的产物。
 
@@ -215,7 +218,11 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 {{COVER_EMOTION_MAP}}     → 决策焦虑→暗色警示；反常识→对比撞色；案例复盘→暖色叙事
 {{COVER_SERIES_LAYOUT}}   → 顶部固定压"大厂过来人老K"账号名，中部大字结论，底部小字场景标签
 {{COVER_DESIGN_LANGUAGE}} → 冷峻职场纪实风（深灰蓝冷调+暖色点缀、哑光质感、极粗黑体主锤字、中央焦点构图）
+{{BRAND_OPENING}}         → "我是老K，从大厂中层裸辞出来的过来人，只跟你说真话、不灌鸡汤"（含账号"老K"、过来人口吻，绑人设）
+{{BRAND_CLOSING}}         → "想清楚了再动，别慌——关注老K，帮你把职场里的糊涂账算明白"（价值总结+关注引导，贴人设）
 ```
+
+> **品牌口令必须一号一定制**：上面这两句只对"大厂过来人老K"成立，换个账号就得重写。做美食号的可能是"我是社区大厨阿强，家常菜也能做出馆子味"，做测评号的可能是"数据说话，我是XX，只测不吹"。判据是含账号名/变体、口吻贴人设、一句话记得住，**绝不能套"大家好欢迎来到我的频道"这类通用模板**——那等于放弃了声音指纹。详见 [账号长记忆方法论](references/methodology/account-memory.md)。
 
 填完后，每个占位符对应的真实内容还要**同步体现在产物各模块正文里**（比如 `{{TITLE_RULES}}` 不只是模板里的一行占位，产物「标题生成」模块的完整方法论正文都要按这个规则展开），占位符表只是落地时的对照清单，不是最终交付内容本身。
 
@@ -226,9 +233,15 @@ python3 "$SKILL_DIR/scripts/validate_skill.py" <生成的产物目录>
 - 无条件复制进产物：`web_search.py`（联网搜索网关，产物做选题/热点研究时统一走它，别用自带 WebSearch）、`generate_cover.py`（封面生成脚本）、`fetch_hotlist.py`（选题第零步扫实时热榜，调自部署的 DailyHotApi）、`content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py`（内容资产库）、`.env.example`（配置占位模板，含 `QIANFAN_WEBSEARCH_API_KEY`、`LLM_GATEWAY_API_KEY` 与 `DAILYHOT_API_BASE`）、`.gitignore`（确保真实 `.env` 不被提交）。这批是 `validate_skill.py` 校验的必需脚本，少一个产物就通不过校验。产物 SKILL.md 里凡涉及联网研究，都要写明"用 `scripts/web_search.py` 网关搜索，别直接用 agent 自带的 WebSearch"，并复制一份真实 `.env`（含 `QIANFAN_WEBSEARCH_API_KEY`）进产物、由 `.gitignore` 排除。
 - 视垂类需要，额外配置抓取实时数据的脚本：**判断标准是该垂类是否需要活数据**——财经类（行情/财报）、热点追踪类（实时新闻/热搜）、榜单类（销量榜/播放榜）这三类需要；纯知识科普、故事叙事、生活记录等垂类通常不需要，跳过这一步即可。（注：`fetch_hotlist.py` 抓的是跨平台通用热榜，属上面的无条件必备项，与这里"垂类专属活数据脚本"是两回事。）
 
-**内容资产库（每个产物必带）**：产物要能把每次产出的内容结构化沉淀到独立于 skill 的长期数据库 `~/.claude|.codex/content-db/<账号slug>/`。落地方式：把 `content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py` 复制进产物 `scripts/`（脚本从自身路径推导账号 slug 与数据根，无需改写）；产物的选题模块开头查库去重与找系列、文稿模块末尾自动存档、SKILL.md 说明回填与查库方式——这三处已在模板中就位，填模板时不要删。数据独立存放，重装产物 skill 不影响历史内容。
+**内容资产库（每个产物必带）**：产物要能把每次产出的内容结构化沉淀到独立于 skill 的长期数据库 `~/.claude/content-db/<账号slug>/`。落地方式：把 `content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py` 复制进产物 `scripts/`（脚本从自身路径推导账号 slug 与数据根，无需改写）；产物的选题模块开头查库去重与找系列、文稿模块末尾自动存档、SKILL.md 说明回填与查库方式——这三处已在模板中就位，填模板时不要删。数据独立存放，重装产物 skill 不影响历史内容。
 
 **工作区脚手架（每个产物必带）**：产物要有一致的 workspace 落盘约定——从 `workspace-guide.md.tmpl` 填空生成产物的 `references/workspace-guide.md`。它定义每支视频落 `workspace/<日期_标题>/`（`视频基础信息.md` 统一文档 + `封面/` + `参考资料/` + `storyboard_plan.md` + `数据/`）、账号级落 `workspace/账号数据/<平台>.md` 与 `workspace/reports/`。占位符 `{{ACCOUNT_NAME}}`/`{{PLATFORMS}}`/`{{VIDEO_FORMAT}}`/`{{DATA_TRACKING_PLATFORMS}}`/`{{ACCOUNT_SLUG}}`。它是选题/文稿/标题/封面/分镜/数据六个模块落盘路径的唯一契约，content-db（跨重装长期库）与 workspace（单账号工作区）并存，产物 SKILL.md 的「工作区 workspace」章已点明分工。`validate_skill.py` 强制要求产物含 `references/workspace-guide.md`。
+
+**账号长记忆 huasheng.md（每个产物必带）**：产物要有一份**开工前必读**的长期记忆——从 `account-memory.md.tmpl` 填空生成产物的 `workspace/huasheng.md`（注意落在 `workspace/` 下、不是 `references/`）。它是"数据→复盘→反哺创作"闭环的落脚点，也是账号的大脑：
+- **第一节「我是谁」预置死**：账号名/平台/垂类/人设/目标受众/受众心声/差异化定位/内容方向——这些在阶段2诊断确认后已定，直接填成真实内容，不留 `{{...}}` 空壳。
+- **第二节「品牌口令」按账号定制**：填 `{{BRAND_OPENING}}`/`{{BRAND_CLOSING}}` 两句每期逐字复用的固定口令。**必须一号一定制**——含账号名/变体、口吻贴人设、一句话记得住，绝不套通用模板（判据与反例见 [账号长记忆方法论](references/methodology/account-memory.md)）。这两句同时是分镜 A Roll「品牌锚/CTA 结尾」的取值来源。
+- **第三节「流量基线」、第四节「累积规律」留结构+留空**：生成时不编造数字/规律，只保留表格骨架与"怎么填/怎么回写"的说明，等产物运行发够数据、做过复盘再长出来。
+- 产物 SKILL.md 的「前置步骤」把"开工前必读 `workspace/huasheng.md`"列为动笔前第一件事；`workspace-guide.md` 顶层结构里列出它并说明地位；`data-tracking.md` 的复盘一节把"稳定规律回写 huasheng 第四节"写清。`validate_skill.py` 强制要求产物含 `workspace/huasheng.md`。
 
 **分镜模块（每个产物必带）**：从 `storyboard-plan.md.tmpl` 填空生成产物的 `references/storyboard-plan.md`，承载花生 AI Method-B 分镜方法论。底座是 `references/methodology/peanut-production.md`（纯口播稿、中文标点 + Method-B 粒度模型），模板展开完整五步：场景划分（=素材检索批次，只承载 `scene_design`）→ `cloud_only` 分镜断句 → **画面类型与画面描述下沉到分镜**（一镜一给 b-roll / b-roll+mg / mg_frame，三档=素材编排强度三档，核心问「单一素材能否自我陈述」）→ **内嵌 JSON 输出**（`scenes[].shots[]`，字段 `shot_id/visual_type/source/script/visual_description`）→ 两层 MG 画风（固定基因来自 `{{COVER_DESIGN_LANGUAGE}}` × 情绪温度 `{{COVER_EMOTION_MAP}}` × 每期视觉母题从封面核心意象延续）。含独立入口/无封面降级、子 agent 委任、**逐字校验硬护栏**（全片 `script` 拼接必须逐字等于口播稿）。
 - 常规占位符：`{{NICHE}}`/`{{VIDEO_FORMAT}}`/`{{COVER_DESIGN_LANGUAGE}}`/`{{STORYBOARD_STYLE}}`/`{{COVER_EMOTION_MAP}}`。
@@ -267,4 +280,5 @@ python3 scripts/validate_skill.py <产物目录>
 - 产物必须具备可运行的内容资产库能力：`content_db.py`/`archive_content.py`/`query_db.py`/`update_metrics.py` 四个脚本齐全并能正确读写 `content-db/<slug>/`，选题模块查库去重、文稿模块自动存档两处衔接不能缺失。
 - 产物必须含 `references/workspace-guide.md` 与 `references/storyboard-plan.md`（无论垂类），且 SKILL.md 工作流总览把「分镜」列在审查之后。分镜模块的逐字校验硬护栏（所有分镜 `script` 按序拼接逐字等于口播稿）与「画面类型/画面描述下沉到分镜」的粒度模型不能改回旧的场景级粒度。缺任一 reference 或流程未列分镜步，视为生成未完成。
 - 覆盖发布后数据追踪的产物：必带 `scripts/_paths.py` 且它把 workspace 定位到产物自身（不跨 skill、不依赖环境变量）；落盘路径必须与 `workspace-guide.md` 一致（`账号数据/<平台>.md`、各视频 `数据/<平台>_数据.md`）；数据追踪脚本不硬编码账号名，cookie 不预置、由 `.gitignore` 排除。
+- 产物必须含 `workspace/huasheng.md`（账号长记忆），且 SKILL.md 前置步骤把"开工前必读 huasheng.md"列为动笔前第一件事。其第一节账号内核必须预置成真实内容（不留空壳），第二节品牌口令必须**按本账号定制**（含账号名/变体、贴人设，绝不套"大家好欢迎来到我的频道"这类通用模板）。缺 huasheng.md、品牌口令做成通用模板、或前置步骤没列必读，视为生成未完成。
 - 产物必须通过 `scripts/validate_skill.py` 校验，且不遗留任何已知问题。

@@ -21,6 +21,9 @@ def _make_skill(tmp_path, with_scripts):
         rd.mkdir()
         for name in _REQUIRED_REFS:
             (rd / name).write_text("# stub\n", encoding="utf-8")
+        wd = tmp_path / "workspace"
+        wd.mkdir()
+        (wd / "huasheng.md").write_text("# huasheng\n", encoding="utf-8")
 
 
 def test_missing_scripts_reported(tmp_path):
@@ -34,3 +37,10 @@ def test_all_scripts_present_ok(tmp_path):
     _make_skill(tmp_path, with_scripts=True)
     problems = v.validate_skill_dir(str(tmp_path))
     assert problems == []
+
+
+def test_missing_huasheng_reported(tmp_path):
+    _make_skill(tmp_path, with_scripts=True)
+    (tmp_path / "workspace" / "huasheng.md").unlink()
+    problems = v.validate_skill_dir(str(tmp_path))
+    assert any("huasheng.md" in p for p in problems)
